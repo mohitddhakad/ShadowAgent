@@ -1,0 +1,104 @@
+/* ShadowAgent Cybersecurity Command Center - Global Styles */
+
+:root {
+  --bg-canvas: #070a12;
+  --bg-surface: #0d121f;
+  --bg-card: #121929;
+  --bg-card-hover: #182238;
+  --bg-input: #090e18;
+  
+  --border-subtle: #1c2638;
+  --border-medium: #2a3852;
+  --border-focus: #3b82f6;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #94a3b8;
+  --text-muted: #64748b;
+
+  --color-green: #10b981;
+  --color-amber: #f59e0b;
+  --color-red: #ef4444;
+  --color-cyan: #06b6d4;
+  --color-blue: #3b82f6;
+  --color-purple: #8b5cf6;
+}
+
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html, body, #root {
+  margin: 0;
+  padding: 0;
+  height: 100%;
+  width: 100%;
+  overflow: hidden;
+  background-color: var(--bg-canvas);
+  color: var(--text-primary);
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar for Command Center */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: var(--bg-surface);
+}
+::-webkit-scrollbar-thumb {
+  background: var(--border-medium);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: var(--text-muted);
+}
+
+/* Animations */
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+@keyframes pulseGlowRed {
+  0%, 100% { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 0 6px rgba(239, 68, 68, 0.2); }
+  50% { border-color: rgba(239, 68, 68, 0.9); box-shadow: 0 0 14px rgba(239, 68, 68, 0.4); }
+}
+
+@keyframes pulseGlowCyan {
+  0%, 100% { border-color: rgba(6, 182, 212, 0.4); box-shadow: 0 0 6px rgba(6, 182, 212, 0.2); }
+  50% { border-color: rgba(6, 182, 212, 0.9); box-shadow: 0 0 12px rgba(6, 182, 212, 0.4); }
+}
+
+.anim-pulse-threat {
+  animation: pulseGlowRed 2s infinite ease-in-out;
+}
+
+.anim-pulse-defense {
+  animation: pulseGlowCyan 2s infinite ease-in-out;
+}
+
+/* React Flow styling customizations */
+.react-flow__attribution {
+  display: none !important;
+}
+
+.react-flow__controls {
+  background: var(--bg-card) !important;
+  border: 1px solid var(--border-subtle) !important;
+  border-radius: 6px !important;
+  overflow: hidden;
+}
+
+.react-flow__controls-button {
+  background: transparent !important;
+  border-bottom: 1px solid var(--border-subtle) !important;
+  color: var(--text-secondary) !important;
+  fill: var(--text-secondary) !important;
+}
+
+.react-flow__controls-button:hover {
+  background: var(--bg-card-hover) !important;
+  color: var(--text-primary) !important;
+}

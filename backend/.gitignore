@@ -1,0 +1,10 @@
+# Backend gitignore
+.env
+.env.*
+!.env.example
+__pycache__/
+*.py[cod]
+.pytest_cache/
+*.zip
+models/
+rl/models/
