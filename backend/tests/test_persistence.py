@@ -360,3 +360,97 @@ async def test_get_run_by_id_returns_run_nodes_and_events(client):
     assert "node_key" in first_event
     assert "action" in first_event
     assert "details" in first_event
+
+
+@pytest.mark.asyncio
+async def test_health_reports_storage_adapter_and_diagnostics(client):
+    """Verify /health exposes adapter identity and migration diagnostics."""
+    resp = await client.get("/health")
+    assert resp.status_code == 200
+    data = resp.json()
+    assert "storage_adapter" in data
+    assert data["storage_adapter"] in ("SupabaseRepository", "InMemoryRepository")
+    assert "migration_required" in data
+    assert isinstance(data["migration_required"], bool)
+
+
+def test_supabase_repository_full_lifecycle_mocked():
+    """Verify SupabaseRepository creates, populates, and reads runs when tables exist."""
+    mock_client = MagicMock()
+    mock_runs_table = MagicMock()
+    mock_nodes_table = MagicMock()
+    mock_events_table = MagicMock()
+
+    def get_table(name: str):
+        if name == "simulation_runs":
+            return mock_runs_table
+        elif name == "network_nodes":
+            return mock_nodes_table
+        elif name == "simulation_events":
+            return mock_events_table
+        return MagicMock()
+
+    mock_client.table.side_effect = get_table
+
+    # Mock responses
+    mock_runs_table.upsert.return_value = mock_runs_table
+    mock_runs_table.update.return_value = mock_runs_table
+    mock_runs_table.execute.return_value = MagicMock(data=[])
+
+    mock_nodes_table.delete.return_value = mock_nodes_table
+    mock_nodes_table.eq.return_value = mock_nodes_table
+    mock_nodes_table.insert.return_value = mock_nodes_table
+    mock_nodes_table.execute.return_value = MagicMock(data=[])
+
+    mock_events_table.delete.return_value = mock_events_table
+    mock_events_table.eq.return_value = mock_events_table
+    mock_events_table.insert.return_value = mock_events_table
+    mock_events_table.execute.return_value = MagicMock(data=[])
+
+    repo = SupabaseRepository(mock_client)
+
+    # 1. create_run
+    assert repo.create_run("run-test-full", "2026-10-27T10:00:00Z") is True
+    mock_runs_table.upsert.assert_called_once()
+
+    # 2. save_network_nodes
+    nodes = [{"id": "fw-1", "label": "Firewall", "type": "firewall", "risk_score": 0.1, "x": 100, "y": 200}]
+    assert repo.save_network_nodes("run-test-full", nodes, {"fw-1": "clean"}) is True
+    mock_nodes_table.insert.assert_called_once()
+
+    # 3. save_events
+    events = [{
+        "id": "e-1",
+        "timestamp": "2026-10-27T10:00:01Z",
+        "agent": "Red Team",
+        "severity": "medium",
+        "message": "Probe attempt",
+        "node_id": "fw-1",
+        "action": "port_scan",
+        "success": False,
+        "phase": 1,
+    }]
+    assert repo.save_events("run-test-full", events) is True
+    mock_events_table.insert.assert_called_once()
+
+    # 4. complete_run
+    metrics = {"total_events": 1, "threats_detected": 1, "attacks_blocked": 1, "detection_rate": 1.0}
+    assert repo.complete_run("run-test-full", "2026-10-27T10:00:02Z", metrics) is True
+    mock_runs_table.update.assert_called_once()
+
+    # 5. list_runs
+    mock_runs_table.select.return_value = mock_runs_table
+    mock_runs_table.order.return_value = mock_runs_table
+    mock_runs_table.limit.return_value = mock_runs_table
+    mock_runs_table.execute.return_value = MagicMock(data=[{
+        "id": "run-test-full",
+        "status": "completed",
+        "started_at": "2026-10-27T10:00:00Z",
+        "completed_at": "2026-10-27T10:00:02Z",
+        "metrics": metrics,
+    }])
+
+    runs = repo.list_runs(10)
+    assert len(runs) == 1
+    assert runs[0]["run_id"] == "run-test-full"
+    assert runs[0]["metrics"]["total_events"] == 1

@@ -7,6 +7,9 @@ The frontend never receives credentials.
 from __future__ import annotations
 
 import os
+import logging
+from contextlib import asynccontextmanager
+from pathlib import Path
 from typing import Any, Optional
 
 from fastapi import FastAPI, HTTPException, status
@@ -43,7 +46,7 @@ from rl import (
 
 class Settings(BaseSettings):
     model_config = SettingsConfigDict(
-        env_file="backend/.env",
+        env_file=str(Path(__file__).resolve().parent / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
     )
@@ -95,6 +98,26 @@ def _persist_run(result: SimulationResult) -> SimulationResult:
     return result
 
 
+logger = logging.getLogger("shadowagent.main")
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Safe startup probe for Supabase connectivity and schema readiness."""
+    logger.info("[ShadowAgent] Backend startup: initializing repository...")
+    repo = get_repository()
+    if supabase_config.is_configured:
+        connected, msg = test_connection()
+        if connected:
+            logger.info("[ShadowAgent] Storage Engine: Supabase PostgreSQL connected.")
+        else:
+            logger.warning("[ShadowAgent] Storage Engine: Supabase configured, diagnostic: %s", msg)
+    else:
+        logger.info("[ShadowAgent] Storage Engine: InMemoryRepository active (Supabase unconfigured).")
+    yield
+    logger.info("[ShadowAgent] Backend shutdown.")
+
+
 # ── FastAPI Application ───────────────────────────────────────────────────────
 
 app = FastAPI(
@@ -104,6 +127,7 @@ app = FastAPI(
         "Educational use only — no real networks are accessed or affected."
     ),
     version="0.4.0",
+    lifespan=lifespan,
 )
 
 app.add_middleware(
@@ -160,14 +184,22 @@ def health():
     else:
         status_msg = supabase_config.configuration_status
 
+    migration_required = (
+        supabase_config.is_configured
+        and not is_connected
+        and ("table does not exist" in status_msg.lower() or "schema" in status_msg.lower())
+    )
+
     return {
         "status": "ok",
         "project": "ShadowAgent",
         "version": "0.4.0",
         "supabase_configured": supabase_config.is_configured,
         "supabase_connected": is_connected,
+        "storage_adapter": "SupabaseRepository" if is_supabase else "InMemoryRepository",
         "persistence_backend": "supabase" if (is_supabase and is_connected) else "in_memory",
         "persistence_status": status_msg,
+        "migration_required": migration_required,
         "simulation": "ready",
     }
 

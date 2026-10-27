@@ -87,8 +87,10 @@ class SupabaseRepository(SimulationRepository):
 
     def __init__(self, client: Any) -> None:
         self.client = client
+        self._memory_backup = InMemoryRepository()
 
     def create_run(self, run_id: str, started_at: str) -> bool:
+        self._memory_backup.create_run(run_id, started_at)
         try:
             payload = {
                 "id": run_id,
@@ -110,6 +112,7 @@ class SupabaseRepository(SimulationRepository):
         nodes: List[Any],
         node_statuses: Dict[str, str],
     ) -> bool:
+        self._memory_backup.save_network_nodes(run_id, nodes, node_statuses)
         if not nodes:
             return True
         try:
@@ -155,6 +158,7 @@ class SupabaseRepository(SimulationRepository):
         run_id: str,
         events: List[Any],
     ) -> bool:
+        self._memory_backup.save_events(run_id, events)
         if not events:
             return True
         try:
@@ -204,6 +208,7 @@ class SupabaseRepository(SimulationRepository):
         metrics: Any,
         status: str = "completed",
     ) -> bool:
+        self._memory_backup.complete_run(run_id, completed_at, metrics, status)
         try:
             metrics_dict = metrics.model_dump() if hasattr(metrics, "model_dump") else dict(metrics)
             payload = {
@@ -223,6 +228,7 @@ class SupabaseRepository(SimulationRepository):
         error_message: str,
         completed_at: Optional[str] = None,
     ) -> bool:
+        self._memory_backup.fail_run(run_id, error_message, completed_at)
         try:
             payload = {
                 "status": "failed",
@@ -245,6 +251,8 @@ class SupabaseRepository(SimulationRepository):
                 .execute()
             )
             data = resp.data or []
+            if not data and self._memory_backup.runs:
+                return self._memory_backup.list_runs(limit)
             results = []
             for r in data:
                 m = r.get("metrics") or {}
@@ -265,14 +273,14 @@ class SupabaseRepository(SimulationRepository):
             return results
         except Exception as exc:
             logger.error("[SupabaseRepository] list_runs failed: %s", type(exc).__name__)
-            return []
+            return self._memory_backup.list_runs(limit)
 
     def get_run(self, run_id: str) -> Optional[Dict[str, Any]]:
         try:
             # 1. Fetch run
             run_resp = self.client.table("simulation_runs").select("*").eq("id", run_id).limit(1).execute()
             if not run_resp.data:
-                return None
+                return self._memory_backup.get_run(run_id)
             run_row = run_resp.data[0]
 
             # 2. Fetch nodes
@@ -315,7 +323,7 @@ class SupabaseRepository(SimulationRepository):
             }
         except Exception as exc:
             logger.error("[SupabaseRepository] get_run failed: %s", type(exc).__name__)
-            return None
+            return self._memory_backup.get_run(run_id)
 
 
 # ── In-Memory Implementation ─────────────────────────────────────────────────

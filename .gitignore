@@ -10,9 +10,12 @@ build/
 *.egg
 .eggs/
 .venv/
+backend/.venv/
 venv/
 env/
 .env
+backend/.env
+backend/.env.*
 .env.local
 .env.*.local
 

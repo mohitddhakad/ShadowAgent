@@ -15,9 +15,9 @@ from dotenv import load_dotenv
 _BACKEND_DIR = Path(__file__).resolve().parent.parent
 _ENV_PATH = _BACKEND_DIR / ".env"
 if _ENV_PATH.exists():
-    load_dotenv(dotenv_path=_ENV_PATH, override=False)
+    load_dotenv(dotenv_path=_ENV_PATH, override=True)
 else:
-    load_dotenv(override=False)
+    load_dotenv(override=True)
 
 
 def _is_placeholder(val: Optional[str]) -> bool:
@@ -71,11 +71,11 @@ class SupabaseConfig:
     def configuration_status(self) -> str:
         """Return a human-readable safe status message WITHOUT secret values."""
         if not self._url and not self._key:
-            return "Unconfigured: SUPABASE_URL and SUPABASE_SECRET_KEY are not set in backend/.env"
+            return "Unconfigured: SUPABASE_URL and SUPABASE_SERVICE_KEY (or SUPABASE_SECRET_KEY) are not set in backend/.env"
         if not self._url:
             return "Partially configured: SUPABASE_URL is missing"
         if not self._key:
-            return "Partially configured: SUPABASE_SECRET_KEY is missing"
+            return "Partially configured: SUPABASE_SERVICE_KEY (or SUPABASE_SECRET_KEY) is missing"
         if _is_placeholder(self._url) or _is_placeholder(self._key):
             return "Placeholder values detected in backend/.env. Using in-memory fallback."
         if not self._url.startswith("https://"):

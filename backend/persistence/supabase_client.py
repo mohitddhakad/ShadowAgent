@@ -8,8 +8,7 @@ from __future__ import annotations
 
 import logging
 from typing import Optional, Tuple
-from supabase import create_client, Client
-from supabase.lib.client_options import ClientOptions
+from supabase import create_client, Client, ClientOptions
 
 from .config import config
 
@@ -66,6 +65,11 @@ def test_connection() -> Tuple[bool, str]:
         err_msg = str(exc)
         # Sanitize error message to ensure no URL or key substring appears
         clean_msg = err_msg.replace(config.secret_key, "[REDACTED]") if config.secret_key else err_msg
-        if "relation \"public.simulation_runs\" does not exist" in clean_msg.lower():
+        low_msg = clean_msg.lower()
+        if (
+            "relation \"public.simulation_runs\" does not exist" in low_msg
+            or "could not find the table 'public.simulation_runs'" in low_msg
+            or "pgrst205" in low_msg
+        ):
             return False, "Connected to Supabase, but 'public.simulation_runs' table does not exist. Please apply the database schema."
         return False, f"Supabase connection error ({err_name}): {clean_msg[:120]}"

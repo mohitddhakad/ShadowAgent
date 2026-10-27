@@ -132,22 +132,87 @@ export const SettingsView: React.FC<SettingsViewProps> = ({
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, fontSize: 12 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b' }}>Active Storage Engine:</span>
-              <span style={{ color: '#f8fafc', fontWeight: 600, textTransform: 'capitalize' }}>
-                {health?.persistence_backend ?? 'In-Memory Fallback'}
+              <span
+                style={{
+                  color: health?.supabase_connected
+                    ? '#a78bfa'
+                    : health?.supabase_configured
+                    ? '#f59e0b'
+                    : '#94a3b8',
+                  fontWeight: 600,
+                }}
+              >
+                {health?.supabase_connected
+                  ? 'Supabase PostgreSQL'
+                  : health?.supabase_configured
+                  ? 'In-Memory Fallback (Pending Migration)'
+                  : 'In-Memory'}
+              </span>
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+              <span style={{ color: '#64748b' }}>Storage Adapter:</span>
+              <span style={{ color: '#f8fafc', fontWeight: 600 }}>
+                {health?.storage_adapter ?? (health?.supabase_configured ? 'SupabaseRepository' : 'InMemoryRepository')}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#64748b' }}>Supabase Configured:</span>
               <span style={{ color: health?.supabase_configured ? '#10b981' : '#f59e0b', fontWeight: 600 }}>
-                {health?.supabase_configured ? 'Yes' : 'No (Using In-Memory)'}
+                {health?.supabase_configured ? 'Yes (backend/.env)' : 'No (Using In-Memory)'}
               </span>
             </div>
             <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-              <span style={{ color: '#64748b' }}>Diagnostic State:</span>
-              <span style={{ color: '#94a3b8', maxWidth: 220, textAlign: 'right', textOverflow: 'ellipsis', overflow: 'hidden', whiteSpace: 'nowrap' }}>
-                {health?.persistence_status ?? 'Operating in-memory'}
+              <span style={{ color: '#64748b' }}>Supabase Connected:</span>
+              <span
+                style={{
+                  color: health?.supabase_connected ? '#10b981' : health?.supabase_configured ? '#f59e0b' : '#64748b',
+                  fontWeight: 600,
+                }}
+              >
+                {health?.supabase_connected
+                  ? 'Yes (Connected & Verified)'
+                  : health?.supabase_configured
+                  ? 'No (Tables Missing in Database)'
+                  : 'No'}
               </span>
             </div>
+            <div style={{ marginTop: 6, paddingTop: 8, borderTop: '1px solid #1c2638' }}>
+              <div style={{ color: '#64748b', marginBottom: 4, fontWeight: 500 }}>Diagnostic Status:</div>
+              <div
+                style={{
+                  color: '#94a3b8',
+                  background: '#090d16',
+                  padding: '8px 10px',
+                  borderRadius: 6,
+                  border: '1px solid #1e293b',
+                  fontSize: 11,
+                  lineHeight: 1.4,
+                  wordBreak: 'break-word',
+                }}
+              >
+                {health?.persistence_status ?? 'Operating in-memory fallback.'}
+              </div>
+            </div>
+            {health?.migration_required && (
+              <div
+                style={{
+                  marginTop: 6,
+                  padding: '10px 12px',
+                  background: '#291b00',
+                  border: '1px solid #f59e0b',
+                  borderRadius: 6,
+                  color: '#fbbf24',
+                  fontSize: 11,
+                  lineHeight: 1.5,
+                }}
+              >
+                <strong>Action Required:</strong> Supabase credentials are valid, but database tables do not exist yet. Run{' '}
+                <code style={{ background: '#3b2800', padding: '2px 4px', borderRadius: 4, color: '#fef08a' }}>
+                  backend/migrations/001_initial_schema.sql
+                </code>{' '}
+                in your Supabase SQL Editor to activate PostgreSQL storage.
+              </div>
+            )}
           </div>
         </div>
       </div>

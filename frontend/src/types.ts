@@ -110,6 +110,8 @@ export interface HealthStatus {
   persistence_backend?: 'supabase' | 'in_memory';
   persistence_status?: string;
   simulation?: string;
+  storage_adapter?: string;
+  migration_required?: boolean;
 }
 
 export interface RunNodeSnapshot {
